@@ -11,15 +11,12 @@ export default (config, { strapi }: { strapi: Strapi }) => {
     const slashCount = (originalUrl.match(/\//g) || []).length;
     const split = originalUrl.split("/");
     const resource = split[2].slice(0, -1);
-    const id = split[3];
 
     if (method === "POST" && originalUrl.includes("/api/")) {
       if (slashCount === 2) {
         try {
           await strapi.db.transaction(async (transaction) => {
             try {
-              console.log(data);
-
               // Recursive function to create nested objects and update IDs
               const createNestedObjects = async (data) => {
                 for (const key in data) {
@@ -54,7 +51,8 @@ export default (config, { strapi }: { strapi: Strapi }) => {
 
               // Update the request body with resolved IDs
               // ctx.request.body.data = data;
-              console.log(data);
+              // console.log(data);
+              // console.log(resource);
 
               await strapi.service(`api::${resource}.${resource}`).create({
                 data: data,
@@ -69,14 +67,11 @@ export default (config, { strapi }: { strapi: Strapi }) => {
             } catch (error) {
               await transaction.rollback(); // Rollback the transaction if there's an error
               ctx.status = 500;
-              ctx.body = {
-                error: `An error occurred while processing your request: ${error}`,
-              };
+              ctx.body = { data: null, error };
             }
           });
         } catch (error) {
           // Handle errors and provide a suitable response
-          console.error(error);
           ctx.status = 500;
           ctx.body = "Internal Server Error";
         }
@@ -89,7 +84,7 @@ export default (config, { strapi }: { strapi: Strapi }) => {
         try {
           await strapi.db.transaction(async (transaction) => {
             try {
-              console.log(data);
+              // console.log(data);
 
               // Recursive function to create nested objects and update IDs
               const updateNestedObjects = async (data) => {
@@ -123,16 +118,14 @@ export default (config, { strapi }: { strapi: Strapi }) => {
 
               // Update the request body with resolved IDs
               ctx.request.body.data = data;
-              console.log(data);
+              // console.log(data);
 
               await transaction.commit();
               await next();
             } catch (error) {
               await transaction.rollback(); // Rollback the transaction if there's an error
               ctx.status = 500;
-              ctx.body = {
-                error: `An error occurred while processing your request: ${error}`,
-              };
+              ctx.body = { data: null, error };
             }
           });
         } catch (error) {
@@ -143,7 +136,7 @@ export default (config, { strapi }: { strapi: Strapi }) => {
         }
       } else {
         ctx.status = 500;
-        ctx.body = "Internal Server Error";
+        ctx.body = "Internal Server Errore";
       }
     } else await next();
   };
