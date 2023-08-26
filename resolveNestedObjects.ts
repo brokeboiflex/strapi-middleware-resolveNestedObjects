@@ -40,7 +40,7 @@ export default (config, { strapi }: { strapi: Strapi }) => {
                       const createdNestedObject = await strapi
                         .service(`api::${key}.${key}`)
                         .create({
-                          data: data[key],
+                          data: nestedObject,
                         });
 
                       data[key] = createdNestedObject.id;
@@ -101,13 +101,23 @@ export default (config, { strapi }: { strapi: Strapi }) => {
                       const nestedObject = data[key];
                       await updateNestedObjects(nestedObject);
 
-                      const updatedNestedObject = await strapi
-                        .service(`api::${key}.${key}`)
-                        .update(data[key].id, {
-                          data: data[key],
-                        });
+                      if (nestedObject.id) {
+                        const updatedNestedObject = await strapi
+                          .service(`api::${key}.${key}`)
+                          .update(nestedObject.id, {
+                            data: nestedObject,
+                          });
 
-                      data[key] = updatedNestedObject.id;
+                        data[key] = updatedNestedObject.id;
+                      } else {
+                        const updatedNestedObject = await strapi
+                          .service(`api::${key}.${key}`)
+                          .create({
+                            data: nestedObject,
+                          });
+
+                        data[key] = updatedNestedObject.id;
+                      }
                     }
                   }
                 }
