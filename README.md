@@ -4,7 +4,7 @@ The `resolveNestedObjects` middleware is designed to handle resolving and creati
 
 ## Assumptions / Prerequisites
 CRUD operations in Strapi require strings formated like that: `api::article.article` notice that `article` is **singular**.
-This middleware is based on object keys of the parent object, so it requires them to reflect type names of thr nested objects.
+This middleware is based on object keys of the parent object, so it requires them to reflect type names of the nested objects.
 
 For example if you have a parent object `cart` and nested field `content` which is related to object `product` this middleware will not work unless you rename `content` to `product`. 
 
