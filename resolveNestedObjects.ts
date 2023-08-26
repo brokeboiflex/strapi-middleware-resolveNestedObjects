@@ -9,14 +9,15 @@ export default (config, { strapi }: { strapi: Strapi }) => {
     const { method, originalUrl } = ctx.request;
     const data = ctx.request.body.data;
     const slashCount = (originalUrl.match(/\//g) || []).length;
-    const split = originalUrl.split("/");
-    const resource = split[2].slice(0, -1);
 
     if (method === "POST" && originalUrl.includes("/api/")) {
       if (slashCount === 2) {
         try {
           await strapi.db.transaction(async (transaction) => {
             try {
+              const split = originalUrl.split("/");
+              const resource = split[2].slice(0, -1);
+
               // Recursive function to create nested objects and update IDs
               const createNestedObjects = async (data) => {
                 for (const key in data) {
@@ -84,8 +85,6 @@ export default (config, { strapi }: { strapi: Strapi }) => {
         try {
           await strapi.db.transaction(async (transaction) => {
             try {
-              // console.log(data);
-
               // Recursive function to create nested objects and update IDs
               const updateNestedObjects = async (data) => {
                 for (const key in data) {
