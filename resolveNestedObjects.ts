@@ -7,7 +7,7 @@ import { Strapi } from "@strapi/strapi";
 export default (config, { strapi }: { strapi: Strapi }) => {
   return async (ctx, next) => {
     const { method, originalUrl } = ctx.request;
-    const data = ctx.request.body.data;
+    const parentObj = ctx.request.body.data;
     const slashCount = (originalUrl.match(/\//g) || []).length;
 
     if (method === "POST" && originalUrl.includes("/api/")) {
@@ -16,16 +16,17 @@ export default (config, { strapi }: { strapi: Strapi }) => {
           await strapi.db.transaction(async (transaction) => {
             try {
               const split = originalUrl.split("/");
-              const resource = split[2].slice(0, -1);
+              const contentType = split[2].slice(0, -1);
 
               // Recursive function to create nested objects and update IDs
               const createNestedObjects = async (data) => {
                 for (const key in data) {
-                  if (typeof data[key] === "object") {
+                  if (typeof data[key] === "object" && data[key] !== null) {
                     if (Array.isArray(data[key])) {
                       for (let i = 0; i < data[key].length; i++) {
                         const nestedObject = data[key][i];
-                        // console.log(strapi.service(`api::${key}.${key}`));
+
+                        await createNestedObjects(nestedObject);
 
                         const createdNestedObject = await strapi
                           .service(`api::${key}.${key}`)
@@ -34,7 +35,8 @@ export default (config, { strapi }: { strapi: Strapi }) => {
                         data[key][i] = createdNestedObject.id;
                       }
                     } else {
-                      // console.log(strapi.service(`api::${key}.${key}`));
+                      const nestedObject = data[key];
+                      await createNestedObjects(nestedObject);
                       const createdNestedObject = await strapi
                         .service(`api::${key}.${key}`)
                         .create({
@@ -48,16 +50,12 @@ export default (config, { strapi }: { strapi: Strapi }) => {
               };
 
               // Create nested objects and update IDs
-              await createNestedObjects(data);
-
-              // Update the request body with resolved IDs
-              // ctx.request.body.data = data;
-              // console.log(data);
-              // console.log(resource);
-
-              await strapi.service(`api::${resource}.${resource}`).create({
-                data: data,
-              });
+              await createNestedObjects(parentObj);
+              await strapi
+                .service(`api::${contentType}.${contentType}`)
+                .create({
+                  data: parentObj,
+                });
 
               await transaction.commit();
               // Respond with a success message
@@ -88,10 +86,11 @@ export default (config, { strapi }: { strapi: Strapi }) => {
               // Recursive function to create nested objects and update IDs
               const updateNestedObjects = async (data) => {
                 for (const key in data) {
-                  if (typeof data[key] === "object") {
+                  if (typeof data[key] === "object" && data[key] !== null) {
                     if (Array.isArray(data[key])) {
                       for (let i = 0; i < data[key].length; i++) {
                         const nestedObject = data[key][i];
+                        await updateNestedObjects(nestedObject);
                         const updatedNestedObject = await strapi
                           .service(`api::${key}.${key}`)
                           .update(nestedObject.id, { data: nestedObject });
@@ -99,7 +98,9 @@ export default (config, { strapi }: { strapi: Strapi }) => {
                         data[key][i] = updatedNestedObject.id;
                       }
                     } else {
-                      // console.log(strapi.service(`api::${key}.${key}`));
+                      const nestedObject = data[key];
+                      await updateNestedObjects(nestedObject);
+
                       const updatedNestedObject = await strapi
                         .service(`api::${key}.${key}`)
                         .update(data[key].id, {
@@ -113,15 +114,15 @@ export default (config, { strapi }: { strapi: Strapi }) => {
               };
 
               // Update nested objects and update IDs
-              await updateNestedObjects(data);
-
+              await updateNestedObjects(parentObj);
               // Update the request body with resolved IDs
-              ctx.request.body.data = data;
-              // console.log(data);
+              ctx.request.body.data = parentObj;
 
               await transaction.commit();
               await next();
             } catch (error) {
+              console.log(error);
+
               await transaction.rollback(); // Rollback the transaction if there's an error
               ctx.status = 500;
               ctx.body = { data: null, error };
